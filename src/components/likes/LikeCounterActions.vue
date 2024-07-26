@@ -13,6 +13,7 @@ import { ref, watch } from 'vue';
 import Loading from '@/components/likes/Loading.vue';
 import confetti from 'canvas-confetti';
 import debounce from 'lodash.debounce';
+import { actions } from 'astro:actions';
 
 type Props = {
   postId: string;
@@ -22,16 +23,24 @@ const props = defineProps<Props>();
 
 const likeCount = ref(0);
 const likeClicks = ref(0);
-const isLoading = ref(false);
+const isLoading = ref(true);
 
-watch(likeCount, debounce(() => {
-  fetch(`/api/posts/likes/${props.postId}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ likes: likeClicks.value }),
+watch(likeCount, debounce(async() => {
+  // fetch(`/api/posts/likes/${props.postId}`, {
+  //   method: 'PUT',
+  //   headers: {
+  //     'Content-Type': 'application/json',
+  //   },
+  //   body: JSON.stringify({ likes: likeClicks.value }),
+  // });
+
+  //! Using Server Actions
+  const response = actions.updatePostsLikes({
+    postId: props.postId,
+    likes: likeClicks.value,
   });
+
+  console.log(response);
 
   likeClicks.value = 0;
 }, 500))
@@ -48,14 +57,21 @@ const likePost = () => {
 };
 
 const getCurrentLikes = async () => {
-  const response = await fetch(`/api/posts/likes/${props.postId}`);
+  //? Using Fetch API
+  // const response = await fetch(`/api/posts/likes/${props.postId}`);
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch likes');
-  }
+  // if (!response.ok) {
+  //   throw new Error('Failed to fetch likes');
+  // }
 
-  const data = await response.json();
-  likeCount.value = data.likes;
+  // const data = await response.json();
+  // likeCount.value = data.likes;
+
+  //? Using Server Actions
+  const { likes } = await actions.getPostLikes(props.postId);
+
+  likeCount.value = likes;
+  isLoading.value = false;
 };
 
 getCurrentLikes();
